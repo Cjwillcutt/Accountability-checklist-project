@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "7cYi4iI0BTWl4JO0o9a0c"
+uri = "file://README.md"
+type = "text"
+title = "README — Responsiboard"
+
+[[outputs]]
+id = "tK6IIO_w_LLPY052w8ZEB"
+uri = "file://WORKING_NOTES.md"
+type = "text"
+title = "Working Notes — Responsiboard"
