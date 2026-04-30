@@ -1,14 +1,16 @@
 import { Link, useLocation } from "wouter";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCallback } from "react";
 
 export function Header() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const handleLogout = useCallback(() => setLocation("/login"), [setLocation]);
 
   const navItems = [
     { name: "Homepage", path: "/" },
     { name: "Projects", path: "/projects" },
-    { name: "Search Friends", path: "/search" },
+    { name: "Search Friends", path: "/search-friends" },
     { name: "Privacy & Cookies", path: "/privacy" },
   ];
 
@@ -42,7 +44,7 @@ export function Header() {
           
           <div className="w-px h-6 bg-border mx-2"></div>
           
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive gap-2" data-testid="button-logout">
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive gap-2" data-testid="button-logout">
             <LogOut className="w-4 h-4" />
             <span>Logout</span>
           </Button>

@@ -20,7 +20,7 @@ export default function Landing() {
               Log in
             </Link>
             <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] transition-all rounded-full px-6">
-              <Link href="/projects" data-testid="link-get-started">Get Started</Link>
+              <Link href="/login" data-testid="link-get-started">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function Landing() {
           
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
             <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 text-lg rounded-full shadow-[0_0_30px_rgba(34,197,94,0.4)] hover:shadow-[0_0_40px_rgba(34,197,94,0.6)] w-full sm:w-auto">
-              <Link href="/projects" data-testid="button-hero-cta">
+              <Link href="/login" data-testid="button-hero-cta">
                 Start a Project <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
@@ -139,7 +139,7 @@ export default function Landing() {
               Join thousands of students who have stopped stressing and started acing their group assignments.
             </p>
             <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-16 px-10 text-xl rounded-full shadow-[0_0_40px_rgba(34,197,94,0.5)] hover:shadow-[0_0_60px_rgba(34,197,94,0.7)] transition-all hover:scale-105">
-              <Link href="/projects" data-testid="button-final-cta">
+              <Link href="/login" data-testid="button-final-cta">
                 Create Your First Project
               </Link>
             </Button>

@@ -4,8 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
 import Projects from "@/pages/Projects";
 import NewProject from "@/pages/NewProject";
+import SearchFriends from "@/pages/SearchFriends";
 
 const queryClient = new QueryClient();
 
@@ -13,11 +15,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/login" component={Login} />
       <Route path="/projects" component={Projects} />
       <Route path="/new-project" component={NewProject} />
-      {/* Placeholder routes for links to avoid 404s */}
-      <Route path="/login" component={Landing} />
-      <Route path="/search" component={Projects} />
+      <Route path="/search-friends" component={SearchFriends} />
       <Route path="/privacy" component={Landing} />
       <Route path="/terms" component={Landing} />
       <Route path="/contact" component={Landing} />
