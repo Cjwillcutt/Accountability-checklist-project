@@ -73,12 +73,18 @@ export default function Login() {
 
         const { user } = await signUp(email, password);
 
-        // Save profile with username immediately (works even before email confirmation)
+        // Save profile with username
         if (user) {
           await createProfile(user.id, username.trim());
         }
 
-        setSignupSuccess(true);
+        // Try to log in immediately; falls back to email confirmation screen if required
+        try {
+          await signIn(email, password);
+          setLocation("/projects");
+        } catch {
+          setSignupSuccess(true);
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
