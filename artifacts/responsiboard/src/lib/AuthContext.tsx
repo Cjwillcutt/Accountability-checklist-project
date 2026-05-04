@@ -26,7 +26,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function loadProfile(userId: string) {
-    const p = await getProfile(userId);
+    let p = await getProfile(userId);
+    // If no profile exists yet and there's a pending username (from signup with email confirmation),
+    // create the profile now on first login
+    if (!p) {
+      const pendingUsername = sessionStorage.getItem("pendingUsername");
+      const pendingUserId = sessionStorage.getItem("pendingUserId");
+      if (pendingUsername && pendingUserId === userId) {
+        try {
+          p = await createProfile(userId, pendingUsername);
+          sessionStorage.removeItem("pendingUsername");
+          sessionStorage.removeItem("pendingUserId");
+        } catch {
+          // Profile may already exist or username taken — ignore
+        }
+      }
+    }
     setProfile(p);
   }
 

@@ -73,16 +73,21 @@ export default function Login() {
 
         const { user } = await signUp(email, password);
 
-        // Save profile with username
-        if (user) {
-          await createProfile(user.id, username.trim());
-        }
-
-        // Try to log in immediately; falls back to email confirmation screen if required
+        // Try to log in immediately after signup
         try {
           await signIn(email, password);
+          // Now authenticated — safe to create profile
+          if (user) {
+            await createProfile(user.id, username.trim());
+          }
           setLocation("/projects");
         } catch {
+          // Email confirmation required — store username so profile can be
+          // created on first login after the user confirms their email
+          if (user) {
+            sessionStorage.setItem("pendingUsername", username.trim());
+            sessionStorage.setItem("pendingUserId", user.id);
+          }
           setSignupSuccess(true);
         }
       }
