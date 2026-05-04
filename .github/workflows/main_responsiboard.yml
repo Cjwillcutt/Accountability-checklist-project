@@ -49,9 +49,9 @@ jobs:
       # Azure only needs the built files, not the TypeScript source code.
       - name: Prepare deployment package
         run: |
-          mkdir -p deploy/artifacts/api-server
           mkdir -p deploy/artifacts/responsiboard
-          cp -r artifacts/api-server/dist deploy/artifacts/api-server/dist
+          mkdir -p deploy/artifacts/responsiboard
+          cp -r artifacts/api-server/dist deploy/artifacts/responsiboard/dist
           cp -r artifacts/responsiboard/dist deploy/artifacts/responsiboard/dist
 
       # Upload the deploy/ folder so the deploy job can access it.
