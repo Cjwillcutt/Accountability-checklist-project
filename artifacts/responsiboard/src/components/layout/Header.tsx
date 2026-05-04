@@ -6,7 +6,7 @@ import { signOut } from "@/lib/auth";
 
 export function Header() {
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   async function handleLogout() {
     await signOut();
@@ -50,9 +50,9 @@ export function Header() {
 
           <div className="w-px h-6 bg-border mx-2" />
 
-          {user && (
-            <span className="text-xs text-muted-foreground truncate max-w-[140px]" data-testid="text-user-email">
-              {user.email}
+          {(profile?.username || user) && (
+            <span className="text-xs text-muted-foreground truncate max-w-[140px]" data-testid="text-user-display">
+              @{profile?.username ?? user?.email}
             </span>
           )}
 
