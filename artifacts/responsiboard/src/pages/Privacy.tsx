@@ -2,26 +2,33 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Shield } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
+import { Header } from "@/components/layout/Header";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Privacy() {
+  const { session } = useAuth();
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Navbar */}
-      <nav className="w-full border-b border-white/5 bg-background/60 backdrop-blur-md">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" data-testid="link-logo-home">
-            <div className="flex items-center gap-3 cursor-pointer">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center font-black text-primary-foreground text-xl shadow-[0_0_15px_rgba(34,197,94,0.5)]">
-                R
+      {session ? (
+        <Header />
+      ) : (
+        <nav className="w-full border-b border-white/5 bg-background/60 backdrop-blur-md">
+          <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+            <Link href="/" data-testid="link-logo-home">
+              <div className="flex items-center gap-3 cursor-pointer">
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center font-black text-primary-foreground text-xl shadow-[0_0_15px_rgba(34,197,94,0.5)]">
+                  R
+                </div>
+                <span className="font-bold text-2xl tracking-tight text-white">Responsiboard</span>
               </div>
-              <span className="font-bold text-2xl tracking-tight text-white">Responsiboard</span>
-            </div>
-          </Link>
-          <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors" data-testid="link-login">
-            Log in
-          </Link>
-        </div>
-      </nav>
+            </Link>
+            <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors" data-testid="link-login">
+              Log in
+            </Link>
+          </div>
+        </nav>
+      )}
 
       <main className="flex-1 container mx-auto px-4 py-16 max-w-3xl">
         <motion.div

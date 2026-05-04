@@ -2,32 +2,39 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, Clock, Users, FileText, CheckSquare, Zap, BarChart3, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
+import { Header } from "@/components/layout/Header";
 
 export default function Landing() {
+  const { session } = useAuth();
+
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-hidden">
-      {/* Navbar */}
-      <nav className="absolute top-0 w-full z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center font-black text-primary-foreground text-xl shadow-[0_0_15px_rgba(34,197,94,0.5)]">
-              R
+      {session ? (
+        <Header />
+      ) : (
+        <nav className="absolute top-0 w-full z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
+          <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center font-black text-primary-foreground text-xl shadow-[0_0_15px_rgba(34,197,94,0.5)]">
+                R
+              </div>
+              <span className="font-bold text-2xl tracking-tight text-white">Responsiboard</span>
             </div>
-            <span className="font-bold text-2xl tracking-tight text-white">Responsiboard</span>
+            <div className="flex items-center gap-4">
+              <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors hidden sm:block" data-testid="link-login">
+                Log in
+              </Link>
+              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] transition-all rounded-full px-6">
+                <Link href="/login" data-testid="link-get-started">Get Started</Link>
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors hidden sm:block" data-testid="link-login">
-              Log in
-            </Link>
-            <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] transition-all rounded-full px-6">
-              <Link href="/login" data-testid="link-get-started">Get Started</Link>
-            </Button>
-          </div>
-        </div>
-      </nav>
+        </nav>
+      )}
 
       {/* Hero Section */}
-      <section className="relative pt-40 pb-20 lg:pt-48 lg:pb-32 px-6 flex flex-col items-center justify-center text-center z-10">
+      <section className={`relative ${session ? "pt-20" : "pt-40"} pb-20 lg:${session ? "pt-24" : "pt-48"} lg:pb-32 px-6 flex flex-col items-center justify-center text-center z-10`}>
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-secondary/20 via-background to-background"></div>
         
         <motion.div
