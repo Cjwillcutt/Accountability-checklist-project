@@ -5,6 +5,7 @@ import { Eye, EyeOff, ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signIn, signUp } from "@/lib/auth";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -13,8 +14,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -22,20 +25,32 @@ export default function Login() {
       setError("Please enter your email and password.");
       return;
     }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      if (mode === "login") {
+        await signIn(email, password);
+        setLocation("/projects");
+      } else {
+        await signUp(email, password);
+        setSignupSuccess(true);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(msg);
+    } finally {
       setIsLoading(false);
-      setLocation("/projects");
-    }, 1200);
+    }
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-hidden">
-      {/* Subtle background glow */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-secondary/10 via-background to-background pointer-events-none" />
 
-      {/* Navbar */}
       <nav className="w-full border-b border-white/5 bg-background/60 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" data-testid="link-logo-home">
@@ -46,24 +61,28 @@ export default function Login() {
               <span className="font-bold text-2xl tracking-tight text-white">Responsiboard</span>
             </div>
           </Link>
-          <span className="text-sm text-muted-foreground">
-            No account?{" "}
-            <Link href="/signup" className="text-primary font-semibold hover:underline" data-testid="link-signup">
-              Sign up free
-            </Link>
-          </span>
+          <button
+            onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setSignupSuccess(false); }}
+            className="text-sm text-muted-foreground hover:text-white transition-colors"
+            data-testid="button-toggle-mode"
+          >
+            {mode === "login" ? (
+              <span>No account? <span className="text-primary font-semibold">Sign up free</span></span>
+            ) : (
+              <span>Have an account? <span className="text-primary font-semibold">Log in</span></span>
+            )}
+          </button>
         </div>
       </nav>
 
-      {/* Login Form */}
       <main className="flex-1 flex items-center justify-center px-4 py-20">
         <motion.div
+          key={mode}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
+          transition={{ duration: 0.35 }}
           className="w-full max-w-md"
         >
-          {/* Badge */}
           <div className="flex justify-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-sm font-medium">
               <Zap className="w-4 h-4" />
@@ -71,105 +90,117 @@ export default function Login() {
             </div>
           </div>
 
-          <h1 className="text-4xl font-black text-white text-center mb-2 tracking-tight">Welcome back</h1>
+          <h1 className="text-4xl font-black text-white text-center mb-2 tracking-tight">
+            {mode === "login" ? "Welcome back" : "Create account"}
+          </h1>
           <p className="text-muted-foreground text-center mb-10 text-base">
-            Log in to pick up where you left off.
+            {mode === "login" ? "Log in to pick up where you left off." : "Join your group. Stay on top of every task."}
           </p>
 
-          {/* Card */}
-          <div className="bg-card border border-border rounded-2xl p-8 shadow-[0_0_60px_rgba(0,0,0,0.4)]">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email" className="text-white font-semibold text-sm">
-                  Email address
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@university.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  data-testid="input-email"
-                  className="h-12 rounded-xl bg-background border-border text-white placeholder:text-muted-foreground focus-visible:ring-primary"
-                />
+          {signupSuccess ? (
+            <div className="bg-card border border-primary/30 rounded-2xl p-8 text-center shadow-xl">
+              <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-4">
+                <ArrowRight className="w-6 h-6 text-primary" />
               </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-white font-semibold text-sm">
-                    Password
-                  </Label>
-                  <Link
-                    href="#"
-                    className="text-xs text-primary hover:underline"
-                    data-testid="link-forgot-password"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    data-testid="input-password"
-                    className="h-12 rounded-xl bg-background border-border text-white placeholder:text-muted-foreground focus-visible:ring-primary pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    data-testid="button-toggle-password"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-destructive text-sm font-medium" data-testid="text-error">
-                  {error}
-                </p>
-              )}
-
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isLoading}
-                data-testid="button-login-submit"
-                className="h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shadow-[0_0_25px_rgba(34,197,94,0.35)] hover:shadow-[0_0_40px_rgba(34,197,94,0.55)] transition-all mt-2"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Logging in...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Log in <ArrowRight className="w-4 h-4" />
-                  </span>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 pt-6 border-t border-border text-center">
+              <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
               <p className="text-muted-foreground text-sm">
-                New to Responsiboard?{" "}
-                <Link href="/signup" className="text-primary font-semibold hover:underline" data-testid="link-signup-bottom">
-                  Create a free account
-                </Link>
+                We sent a confirmation link to <span className="text-white font-medium">{email}</span>. Click it to activate your account, then come back and log in.
               </p>
+              <Button
+                onClick={() => { setMode("login"); setSignupSuccess(false); }}
+                className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl w-full"
+                data-testid="button-go-to-login"
+              >
+                Go to Login
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="bg-card border border-border rounded-2xl p-8 shadow-[0_0_60px_rgba(0,0,0,0.4)]">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="email" className="text-white font-semibold text-sm">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@university.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    data-testid="input-email"
+                    className="h-12 rounded-xl bg-background border-border text-white placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-white font-semibold text-sm">Password</Label>
+                    {mode === "login" && (
+                      <span className="text-xs text-muted-foreground">Min. 6 characters</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete={mode === "login" ? "current-password" : "new-password"}
+                      data-testid="input-password"
+                      className="h-12 rounded-xl bg-background border-border text-white placeholder:text-muted-foreground focus-visible:ring-primary pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      data-testid="button-toggle-password"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <p className="text-destructive text-sm font-medium" data-testid="text-error">{error}</p>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isLoading}
+                  data-testid="button-login-submit"
+                  className="h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shadow-[0_0_25px_rgba(34,197,94,0.35)] hover:shadow-[0_0_40px_rgba(34,197,94,0.55)] transition-all mt-2"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      {mode === "login" ? "Logging in..." : "Creating account..."}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      {mode === "login" ? "Log in" : "Create account"} <ArrowRight className="w-4 h-4" />
+                    </span>
+                  )}
+                </Button>
+              </form>
+
+              <div className="mt-6 pt-6 border-t border-border text-center">
+                <p className="text-muted-foreground text-sm">
+                  {mode === "login" ? "New to Responsiboard? " : "Already have an account? "}
+                  <button
+                    onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
+                    className="text-primary font-semibold hover:underline"
+                    data-testid="button-switch-mode"
+                  >
+                    {mode === "login" ? "Create a free account" : "Log in"}
+                  </button>
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border py-6 bg-background">
         <div className="container mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} Responsiboard. Built for students.</span>
