@@ -37,7 +37,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", router);
 
 // Serve the responsiboard frontend
-const frontendPath = path.join(__dirname, "../../../artifacts/responsiboard/dist/public");
+const frontendPath = path.join(__dirname, "../../../artifacts/responsiboard/dist");
 app.use(express.static(frontendPath));
 
 // For any route that isn't /api/*, send back the frontend's index.html
