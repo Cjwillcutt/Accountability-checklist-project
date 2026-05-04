@@ -10,6 +10,7 @@ import Projects from "@/pages/Projects";
 import NewProject from "@/pages/NewProject";
 import SearchFriends from "@/pages/SearchFriends";
 import Privacy from "@/pages/Privacy";
+import Confirmed from "@/pages/Confirmed";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ function Router() {
         {() => <ProtectedRoute component={SearchFriends} />}
       </Route>
       <Route path="/privacy" component={Privacy} />
+      <Route path="/confirmed" component={Confirmed} />
       <Route path="/terms" component={Landing} />
       <Route path="/contact" component={Landing} />
       <Route component={NotFound} />
