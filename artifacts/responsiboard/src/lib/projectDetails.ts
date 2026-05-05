@@ -20,6 +20,16 @@ export interface ProjectMember {
   email: string;
 }
 
+export interface ProjectFile {
+  id: string;
+  project_id: string;
+  name: string;
+  path: string;
+  url: string;
+  size: number;
+  created_at: string;
+}
+
 export interface ProjectDetail {
   id: string;
   name: string;
@@ -101,4 +111,51 @@ export async function addMember(projectId: string, email: string): Promise<Proje
 export async function deleteMember(id: string): Promise<void> {
   const { error } = await supabase.from("project_members").delete().eq("id", id);
   if (error) throw error;
+}
+
+// Files
+export async function fetchFiles(projectId: string): Promise<ProjectFile[]> {
+  const { data, error } = await supabase
+    .from("project_files")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function uploadFile(projectId: string, file: File): Promise<ProjectFile> {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${projectId}/${Date.now()}_${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("project-files")
+    .upload(path, file, { upsert: false });
+
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from("project-files")
+    .getPublicUrl(path);
+
+  const { data, error } = await supabase
+    .from("project_files")
+    .insert({ project_id: projectId, name: file.name, path, url: urlData.publicUrl, size: file.size })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteFile(id: string, path: string): Promise<void> {
+  await supabase.storage.from("project-files").remove([path]);
+  const { error } = await supabase.from("project_files").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { createProject } from "@/lib/projects";
+import { addDeadline, addChecklistItem, addMember, uploadFile } from "@/lib/projectDetails";
 
 type SectionId = "invite" | "deadline" | "upload" | "checklist";
 
@@ -31,8 +32,8 @@ export default function NewProject() {
   const [newDeadlineLabel, setNewDeadlineLabel] = useState("");
   const [newDeadlineDate, setNewDeadlineDate] = useState("");
 
-  // Upload
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  // Upload — store actual File objects
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   // Checklist
   const [checklistItems, setChecklistItems] = useState<{ text: string; done: boolean }[]>([]);
@@ -50,7 +51,7 @@ export default function NewProject() {
     }
   }
 
-  function addDeadline() {
+  function addDeadlineLocal() {
     if (newDeadlineLabel.trim() && newDeadlineDate) {
       setDeadlines((p) => [...p, { label: newDeadlineLabel.trim(), date: newDeadlineDate }]);
       setNewDeadlineLabel("");
@@ -60,11 +61,15 @@ export default function NewProject() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    setUploadedFiles((p) => [...p, ...files.map((f) => f.name)]);
+    setUploadedFiles((p) => [...p, ...files]);
     e.target.value = "";
   }
 
-  function addChecklistItem() {
+  function removeFile(i: number) {
+    setUploadedFiles((p) => p.filter((_, idx) => idx !== i));
+  }
+
+  function addChecklistItemLocal() {
     const t = newChecklistItem.trim();
     if (t) {
       setChecklistItems((p) => [...p, { text: t, done: false }]);
@@ -84,7 +89,16 @@ export default function NewProject() {
     setSaving(true);
     setSaveError("");
     try {
-      const project = await createProject(projectName);
+      const project = await createProject(projectName, notes);
+
+      // Save all sections in parallel where possible
+      await Promise.all([
+        ...invitedEmails.map((email) => addMember(project.id, email).catch(() => {})),
+        ...deadlines.map((d) => addDeadline(project.id, d.label, d.date).catch(() => {})),
+        ...checklistItems.map((item) => addChecklistItem(project.id, item.text).catch(() => {})),
+        ...uploadedFiles.map((file) => uploadFile(project.id, file).catch(() => {})),
+      ]);
+
       setLocation(`/projects/${project.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not save project.";
@@ -185,8 +199,10 @@ export default function NewProject() {
                                 <Button onClick={handleInvite} data-testid="button-send-invite" className="bg-secondary hover:bg-secondary/90 text-white px-4 rounded-lg shrink-0"><Plus className="w-4 h-4" /></Button>
                               </div>
                               {invitedEmails.map((email) => (
-                                <div key={email} className="flex items-center gap-2 text-sm text-white mb-1">
-                                  <Check className="w-4 h-4 text-primary shrink-0" />{email}
+                                <div key={email} className="flex items-center gap-2 text-sm text-white mb-1 group/item">
+                                  <Check className="w-4 h-4 text-primary shrink-0" />
+                                  <span className="flex-1">{email}</span>
+                                  <button type="button" onClick={() => setInvitedEmails((p) => p.filter((e) => e !== email))} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"><X className="w-4 h-4" /></button>
                                 </div>
                               ))}
                             </div>
@@ -198,13 +214,14 @@ export default function NewProject() {
                               <div className="flex gap-2 mb-3 flex-wrap">
                                 <Input placeholder="e.g. First draft" value={newDeadlineLabel} onChange={(e) => setNewDeadlineLabel(e.target.value)} data-testid="input-deadline-label" className="h-10 bg-background border-border text-white placeholder:text-muted-foreground flex-1 min-w-32" />
                                 <Input type="date" value={newDeadlineDate} onChange={(e) => setNewDeadlineDate(e.target.value)} data-testid="input-deadline-date" className="h-10 bg-background border-border text-white w-40" />
-                                <Button onClick={addDeadline} data-testid="button-add-deadline" className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 rounded-lg"><Plus className="w-4 h-4" /></Button>
+                                <Button onClick={addDeadlineLocal} data-testid="button-add-deadline" className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 rounded-lg"><Plus className="w-4 h-4" /></Button>
                               </div>
                               {deadlines.map((d, i) => (
-                                <div key={i} className="flex items-center gap-2 text-sm text-white mb-1">
+                                <div key={i} className="flex items-center gap-2 text-sm text-white mb-1 group/item">
                                   <Calendar className="w-4 h-4 text-primary shrink-0" />
                                   <span className="flex-1">{d.label}</span>
                                   <span className="text-muted-foreground">{d.date}</span>
+                                  <button type="button" onClick={() => setDeadlines((p) => p.filter((_, idx) => idx !== i))} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive ml-1"><X className="w-4 h-4" /></button>
                                 </div>
                               ))}
                             </div>
@@ -212,15 +229,18 @@ export default function NewProject() {
 
                           {action.id === "upload" && (
                             <div>
-                              <p className="text-muted-foreground text-sm mb-3">Upload rubrics, outlines, or drafts for the group.</p>
+                              <p className="text-muted-foreground text-sm mb-3">Upload rubrics, outlines, or drafts. They'll be saved when you create the project.</p>
                               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-purple-400/60 transition-colors bg-background/50" data-testid="label-file-upload">
                                 <UploadCloud className="w-6 h-6 text-purple-400 mb-1" />
                                 <span className="text-sm text-muted-foreground">Click to upload or drag and drop</span>
                                 <input type="file" multiple className="hidden" onChange={handleFileChange} data-testid="input-file-upload" />
                               </label>
-                              {uploadedFiles.map((name, i) => (
-                                <div key={i} className="flex items-center gap-2 text-sm text-white mt-2">
-                                  <Check className="w-4 h-4 text-primary shrink-0" />{name}
+                              {uploadedFiles.map((file, i) => (
+                                <div key={i} className="flex items-center gap-2 text-sm text-white mt-2 group/item">
+                                  <Check className="w-4 h-4 text-primary shrink-0" />
+                                  <span className="flex-1">{file.name}</span>
+                                  <span className="text-muted-foreground text-xs">{(file.size / 1024).toFixed(1)} KB</span>
+                                  <button type="button" onClick={() => removeFile(i)} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"><X className="w-4 h-4" /></button>
                                 </div>
                               ))}
                             </div>
@@ -230,8 +250,8 @@ export default function NewProject() {
                             <div>
                               <p className="text-muted-foreground text-sm mb-3">Break the project into tasks and assign them.</p>
                               <div className="flex gap-2 mb-3">
-                                <Input placeholder="e.g. Write the introduction" value={newChecklistItem} onChange={(e) => setNewChecklistItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addChecklistItem()} data-testid="input-checklist-item" className="h-10 bg-background border-border text-white placeholder:text-muted-foreground flex-1" />
-                                <Button onClick={addChecklistItem} data-testid="button-add-checklist-item" className="bg-amber-500 hover:bg-amber-500/90 text-white px-4 rounded-lg"><Plus className="w-4 h-4" /></Button>
+                                <Input placeholder="e.g. Write the introduction" value={newChecklistItem} onChange={(e) => setNewChecklistItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addChecklistItemLocal()} data-testid="input-checklist-item" className="h-10 bg-background border-border text-white placeholder:text-muted-foreground flex-1" />
+                                <Button onClick={addChecklistItemLocal} data-testid="button-add-checklist-item" className="bg-amber-500 hover:bg-amber-500/90 text-white px-4 rounded-lg"><Plus className="w-4 h-4" /></Button>
                               </div>
                               {checklistItems.map((item, i) => (
                                 <div key={i} className="flex items-center gap-3 text-sm group/item mb-2" data-testid={`checklist-item-${i}`}>
@@ -281,7 +301,7 @@ export default function NewProject() {
               data-testid="button-create-submit"
             >
               {saving ? (
-                <span className="flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Saving...</span>
+                <span className="flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Saving…</span>
               ) : "Create"}
             </Button>
           </div>

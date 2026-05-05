@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  UserPlus, Calendar, ListTodo, FileEdit,
-  Pencil, ChevronDown, ChevronUp, Plus, Trash2, Check, Loader2, ArrowLeft, X,
+  UserPlus, Calendar, ListTodo, FileEdit, UploadCloud,
+  Pencil, ChevronDown, ChevronUp, Plus, Trash2, Check, Loader2,
+  ArrowLeft, X, FileText, Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,15 +15,17 @@ import {
   fetchDeadlines, addDeadline, deleteDeadline,
   fetchChecklist, addChecklistItem, toggleChecklistItem, deleteChecklistItem,
   fetchMembers, addMember, deleteMember,
+  fetchFiles, uploadFile, deleteFile, formatFileSize,
 } from "@/lib/projectDetails";
-import type { Deadline, ChecklistItem, ProjectMember } from "@/lib/projectDetails";
+import type { Deadline, ChecklistItem, ProjectMember, ProjectFile } from "@/lib/projectDetails";
 
-type SectionId = "invite" | "deadline" | "checklist" | "notes";
+type SectionId = "invite" | "deadline" | "checklist" | "files" | "notes";
 
 export default function ProjectDetail() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const [, setLocation] = useLocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [projectName, setProjectName] = useState("Loading…");
   const [isRenaming, setIsRenaming] = useState(false);
@@ -44,6 +47,10 @@ export default function ProjectDetail() {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [addingMember, setAddingMember] = useState(false);
 
+  const [files, setFiles] = useState<ProjectFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
@@ -51,11 +58,12 @@ export default function ProjectDetail() {
   const load = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
-    const [project, dls, cl, mbs] = await Promise.all([
+    const [project, dls, cl, mbs, fls] = await Promise.all([
       fetchProjectById(projectId),
       fetchDeadlines(projectId),
       fetchChecklist(projectId),
       fetchMembers(projectId),
+      fetchFiles(projectId),
     ]);
     if (!project) { setNotFound(true); setLoading(false); return; }
     setProjectName(project.name);
@@ -64,6 +72,7 @@ export default function ProjectDetail() {
     setDeadlines(dls);
     setChecklist(cl);
     setMembers(mbs);
+    setFiles(fls);
     setLoading(false);
   }, [projectId]);
 
@@ -128,6 +137,27 @@ export default function ProjectDetail() {
     setMembers((p) => p.filter((m) => m.id !== id));
   }
 
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    if (!selected.length || !projectId) return;
+    setUploadingFiles(true);
+    setUploadError("");
+    try {
+      const uploaded = await Promise.all(selected.map((f) => uploadFile(projectId, f)));
+      setFiles((p) => [...p, ...uploaded]);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed. Make sure the storage bucket exists in Supabase.");
+    } finally {
+      setUploadingFiles(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteFile(id: string, path: string) {
+    await deleteFile(id, path);
+    setFiles((p) => p.filter((f) => f.id !== id));
+  }
+
   async function handleSaveNotes() {
     if (!projectId) return;
     setSavingNotes(true);
@@ -138,10 +168,11 @@ export default function ProjectDetail() {
   }
 
   const sections: { id: SectionId; icon: React.ReactNode; label: string; color: string; badge?: number }[] = [
-    { id: "invite", icon: <UserPlus className="w-6 h-6" />, label: "Team Members", color: "text-secondary", badge: members.length || undefined },
-    { id: "deadline", icon: <Calendar className="w-6 h-6" />, label: "Deadlines", color: "text-primary", badge: deadlines.length || undefined },
-    { id: "checklist", icon: <ListTodo className="w-6 h-6" />, label: "Workload Checklist", color: "text-amber-400", badge: checklist.length || undefined },
-    { id: "notes", icon: <FileEdit className="w-6 h-6" />, label: "Notes", color: "text-emerald-400" },
+    { id: "invite",   icon: <UserPlus className="w-6 h-6" />,    label: "Team Members",      color: "text-secondary",   badge: members.length  || undefined },
+    { id: "deadline", icon: <Calendar className="w-6 h-6" />,    label: "Deadlines",         color: "text-primary",     badge: deadlines.length || undefined },
+    { id: "files",    icon: <UploadCloud className="w-6 h-6" />, label: "Files & Documents", color: "text-purple-400",  badge: files.length    || undefined },
+    { id: "checklist",icon: <ListTodo className="w-6 h-6" />,    label: "Workload Checklist",color: "text-amber-400",   badge: checklist.length || undefined },
+    { id: "notes",    icon: <FileEdit className="w-6 h-6" />,    label: "Notes",             color: "text-emerald-400" },
   ];
 
   if (notFound) {
@@ -162,13 +193,14 @@ export default function ProjectDetail() {
       <main className="flex-1 container mx-auto px-4 py-12 flex flex-col">
         <div className="max-w-2xl mx-auto w-full">
 
-          {/* Back + title */}
+          {/* Back */}
           <div className="flex items-center gap-3 mb-10">
             <Button variant="ghost" size="sm" onClick={() => setLocation("/projects")} className="text-muted-foreground hover:text-white gap-1 -ml-2">
               <ArrowLeft className="w-4 h-4" /> Projects
             </Button>
           </div>
 
+          {/* Title + rename */}
           <div className="flex items-center justify-between mb-8">
             {loading ? (
               <div className="h-10 w-48 bg-card animate-pulse rounded-xl" />
@@ -206,7 +238,11 @@ export default function ProjectDetail() {
                     <button
                       type="button"
                       onClick={() => setOpenSection((p) => p === section.id ? null : section.id)}
-                      className={`w-full h-16 flex items-center justify-between px-6 text-lg font-medium rounded-xl border transition-all group ${openSection === section.id ? "bg-secondary/10 border-secondary/50 text-white" : "bg-background/50 border-border text-muted-foreground hover:bg-secondary/10 hover:border-secondary/40 hover:text-white"}`}
+                      className={`w-full h-16 flex items-center justify-between px-6 text-lg font-medium rounded-xl border transition-all group ${
+                        openSection === section.id
+                          ? "bg-secondary/10 border-secondary/50 text-white"
+                          : "bg-background/50 border-border text-muted-foreground hover:bg-secondary/10 hover:border-secondary/40 hover:text-white"
+                      }`}
                     >
                       <div className="flex items-center gap-4">
                         <span className={`${section.color} group-hover:scale-110 transition-transform`}>{section.icon}</span>
@@ -223,6 +259,7 @@ export default function ProjectDetail() {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
                           <div className="bg-background/40 border border-t-0 border-border rounded-b-xl px-6 py-5">
 
+                            {/* ── TEAM MEMBERS ── */}
                             {section.id === "invite" && (
                               <div>
                                 <p className="text-muted-foreground text-sm mb-3">Add your group members by email address.</p>
@@ -243,6 +280,7 @@ export default function ProjectDetail() {
                               </div>
                             )}
 
+                            {/* ── DEADLINES ── */}
                             {section.id === "deadline" && (
                               <div>
                                 <p className="text-muted-foreground text-sm mb-3">Add milestones with due dates.</p>
@@ -265,6 +303,46 @@ export default function ProjectDetail() {
                               </div>
                             )}
 
+                            {/* ── FILES ── */}
+                            {section.id === "files" && (
+                              <div>
+                                <p className="text-muted-foreground text-sm mb-3">Upload rubrics, outlines, drafts, or any file for the group.</p>
+
+                                <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition-colors bg-background/50 ${uploadingFiles ? "border-border opacity-60 pointer-events-none" : "border-border hover:border-purple-400/60"}`}>
+                                  {uploadingFiles
+                                    ? <Loader2 className="w-6 h-6 text-purple-400 animate-spin mb-1" />
+                                    : <UploadCloud className="w-6 h-6 text-purple-400 mb-1" />}
+                                  <span className="text-sm text-muted-foreground">{uploadingFiles ? "Uploading…" : "Click to upload or drag and drop"}</span>
+                                  <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} disabled={uploadingFiles} />
+                                </label>
+
+                                {uploadError && (
+                                  <p className="text-destructive text-sm mt-2">{uploadError}</p>
+                                )}
+
+                                {files.length === 0 && !uploadingFiles && (
+                                  <p className="text-muted-foreground text-sm mt-3">No files uploaded yet.</p>
+                                )}
+
+                                <div className="mt-3 flex flex-col gap-2">
+                                  {files.map((f) => (
+                                    <div key={f.id} className="flex items-center gap-3 text-sm group/item bg-background/60 rounded-lg px-3 py-2">
+                                      <FileText className="w-4 h-4 text-purple-400 shrink-0" />
+                                      <span className="flex-1 text-white truncate">{f.name}</span>
+                                      <span className="text-muted-foreground text-xs shrink-0">{formatFileSize(f.size)}</span>
+                                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-purple-400 transition-colors shrink-0" title="Download">
+                                        <Download className="w-4 h-4" />
+                                      </a>
+                                      <button type="button" onClick={() => handleDeleteFile(f.id, f.path)} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0">
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ── CHECKLIST ── */}
                             {section.id === "checklist" && (
                               <div>
                                 <p className="text-muted-foreground text-sm mb-3">Break the project into tasks. Check them off as you go.</p>
@@ -290,6 +368,7 @@ export default function ProjectDetail() {
                               </div>
                             )}
 
+                            {/* ── NOTES ── */}
                             {section.id === "notes" && (
                               <div>
                                 <p className="text-muted-foreground text-sm mb-3">Shared notes visible to everyone on the project.</p>

@@ -17,13 +17,13 @@ export async function fetchProjects(): Promise<Project[]> {
   return data ?? [];
 }
 
-export async function createProject(name: string): Promise<Project> {
+export async function createProject(name: string, notes = ""): Promise<Project> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await supabase
     .from("projects")
-    .insert({ name: name.trim() || "Untitled Project", user_id: user.id })
+    .insert({ name: name.trim() || "Untitled Project", user_id: user.id, notes })
     .select()
     .single();
 
