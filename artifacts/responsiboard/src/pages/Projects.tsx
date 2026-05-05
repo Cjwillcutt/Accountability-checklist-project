@@ -3,19 +3,16 @@ import { Link, useLocation } from "wouter";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, PlusCircle, Folder, ChevronRight, Users, Loader2, Trash2 } from "lucide-react";
+import { PlusCircle, Folder, ChevronRight, Users, Loader2, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchProjects, deleteProject } from "@/lib/projects";
 import type { Project } from "@/lib/projects";
-
-const PAGE_SIZE = 3;
 
 export default function Projects() {
   const [, setLocation] = useLocation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [page, setPage] = useState(0);
   const [openedId, setOpenedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -25,7 +22,7 @@ export default function Projects() {
       setError("");
       const data = await fetchProjects();
       setProjects(data);
-    } catch (err) {
+    } catch {
       setError("Could not load projects. Please try again.");
     } finally {
       setLoading(false);
@@ -35,9 +32,6 @@ export default function Projects() {
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
-
-  const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
-  const visibleProjects = projects.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   function handleOpen(id: string) {
     setOpenedId(id);
@@ -49,19 +43,11 @@ export default function Projects() {
     try {
       await deleteProject(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
-      // adjust page if we deleted the last item on this page
-      const remaining = projects.length - 1;
-      const maxPage = Math.max(0, Math.ceil(remaining / PAGE_SIZE) - 1);
-      if (page > maxPage) setPage(maxPage);
     } catch {
       setError("Could not delete project.");
     } finally {
       setDeletingId(null);
     }
-  }
-
-  function handleNext() {
-    setPage((p) => (p + 1) % totalPages);
   }
 
   return (
@@ -77,7 +63,7 @@ export default function Projects() {
                 <p className="text-muted-foreground text-sm mt-1">
                   {projects.length === 0
                     ? "No projects yet — create your first one below"
-                    : `${projects.length} project${projects.length !== 1 ? "s" : ""} · Page ${page + 1} of ${totalPages}`}
+                    : `${projects.length} project${projects.length !== 1 ? "s" : ""}`}
                 </p>
               )}
             </div>
@@ -87,14 +73,12 @@ export default function Projects() {
             </div>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm" data-testid="text-error">
               {error}
             </div>
           )}
 
-          {/* Loading state */}
           {loading ? (
             <div className="flex items-center justify-center py-24 text-muted-foreground gap-3">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -115,21 +99,15 @@ export default function Projects() {
               </p>
             </motion.div>
           ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={page}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4 mb-12"
-              >
-                {visibleProjects.map((project, i) => (
+            <AnimatePresence>
+              <div className="space-y-4 mb-12">
+                {projects.map((project, i) => (
                   <motion.div
                     key={project.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.07 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ delay: i * 0.05 }}
                     className={`group flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-2xl bg-card border transition-all shadow-sm gap-4 ${
                       openedId === project.id
                         ? "border-primary shadow-[0_0_20px_rgba(34,197,94,0.2)]"
@@ -174,36 +152,20 @@ export default function Projects() {
                     </div>
                   </motion.div>
                 ))}
-              </motion.div>
+              </div>
             </AnimatePresence>
           )}
 
-          <div className="flex flex-col items-center justify-center py-8 border-t border-border">
+          <div className="flex justify-center py-8 border-t border-border">
             <Button
               asChild
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground h-16 px-10 text-xl rounded-full shadow-[0_0_30px_rgba(34,197,94,0.4)] hover:shadow-[0_0_50px_rgba(34,197,94,0.6)] transition-all hover:scale-105 mb-10"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground h-16 px-10 text-xl rounded-full shadow-[0_0_30px_rgba(34,197,94,0.4)] hover:shadow-[0_0_50px_rgba(34,197,94,0.6)] transition-all hover:scale-105"
             >
               <Link href="/new-project" data-testid="button-create-new-project">
                 <PlusCircle className="mr-2 w-6 h-6" /> Create New Project
               </Link>
             </Button>
-
-            {projects.length > PAGE_SIZE && (
-              <div className="w-full flex items-center justify-between">
-                <p className="text-muted-foreground text-sm">
-                  Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, projects.length)} of {projects.length}
-                </p>
-                <Button
-                  variant="outline"
-                  className="gap-2 rounded-full px-6 hover:border-primary/50 hover:text-primary transition-colors"
-                  onClick={handleNext}
-                  data-testid="button-next"
-                >
-                  Next <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </main>
