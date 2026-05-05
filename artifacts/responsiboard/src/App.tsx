@@ -11,6 +11,7 @@ import NewProject from "@/pages/NewProject";
 import SearchFriends from "@/pages/SearchFriends";
 import Privacy from "@/pages/Privacy";
 import Confirmed from "@/pages/Confirmed";
+import ProjectDetail from "@/pages/ProjectDetail";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,9 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/projects">
         {() => <ProtectedRoute component={Projects} />}
+      </Route>
+      <Route path="/projects/:id">
+        {() => <ProtectedRoute component={ProjectDetail} />}
       </Route>
       <Route path="/new-project">
         {() => <ProtectedRoute component={NewProject} />}

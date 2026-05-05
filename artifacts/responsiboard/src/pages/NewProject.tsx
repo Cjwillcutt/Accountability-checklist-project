@@ -84,8 +84,8 @@ export default function NewProject() {
     setSaving(true);
     setSaveError("");
     try {
-      await createProject(projectName);
-      setLocation("/projects");
+      const project = await createProject(projectName);
+      setLocation(`/projects/${project.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not save project.";
       setSaveError(msg);

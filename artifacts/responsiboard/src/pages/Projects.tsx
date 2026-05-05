@@ -41,7 +41,7 @@ export default function Projects() {
 
   function handleOpen(id: string) {
     setOpenedId(id);
-    setTimeout(() => setLocation("/new-project"), 350);
+    setTimeout(() => setLocation(`/projects/${id}`), 150);
   }
 
   async function handleDelete(id: string) {
